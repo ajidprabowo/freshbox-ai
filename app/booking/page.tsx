@@ -9,16 +9,26 @@ import {
   MapPin,
   User,
   Calendar,
+  Sparkles,
+  Info,
 } from "lucide-react";
 import {
   initializeStorage,
   getBoxes,
   addRental,
   updateBox,
+  saveLatestBoxRecommendation,
 } from "@/lib/storage";
-import { FreshBox, Rental, UsageMode } from "@/lib/types";
+import {
+  FreshBox,
+  Rental,
+  UsageMode,
+  BoxRecommendationResult,
+  BoxRecommendationInput,
+} from "@/lib/types";
 import { generateId, formatDate } from "@/lib/utils";
 import Link from "next/link";
+import BoxRecommendation from "@/components/BoxRecommendation";
 
 function BookingForm() {
   const searchParams = useSearchParams();
@@ -39,6 +49,12 @@ function BookingForm() {
   const [submitting, setSubmitting] = useState(false);
   const [confirmed, setConfirmed] = useState<Rental | null>(null);
 
+  // Track whether a recommendation has been applied
+  const [appliedRecommendation, setAppliedRecommendation] = useState<{
+    result: BoxRecommendationResult;
+    input: BoxRecommendationInput;
+  } | null>(null);
+
   useEffect(() => {
     initializeStorage();
     setBoxes(getBoxes().filter((b) => b.status === "Available"));
@@ -46,6 +62,47 @@ function BookingForm() {
     const today = new Date().toISOString().split("T")[0];
     setForm((f) => ({ ...f, startDate: today }));
   }, []);
+
+  // Handler: apply box recommendation to the booking form
+  const handleApplyRecommendation = (
+    result: BoxRecommendationResult,
+    input: BoxRecommendationInput
+  ) => {
+    // Save to localStorage for reference
+    saveLatestBoxRecommendation({ ...result, input });
+    setAppliedRecommendation({ result, input });
+
+    // Compute end date from start + duration
+    const today = new Date();
+    const startDate = today.toISOString().split("T")[0];
+    const endDate = new Date(
+      today.getTime() + input.storageDuration * 24 * 60 * 60 * 1000
+    )
+      .toISOString()
+      .split("T")[0];
+
+    // Try to find an available box matching the recommended type letter
+    const typeChar = result.recommendedBoxType.replace("FreshBox ", "") as
+      | "S"
+      | "M"
+      | "L";
+    const matchingBox = boxes.find((b) => b.type === typeChar);
+
+    setForm((f) => ({
+      ...f,
+      usageMode: input.usageMode,
+      pickupLocation: input.pickupLocation,
+      destinationLocation: input.destinationLocation,
+      startDate,
+      endDate,
+      boxId: matchingBox?.id || f.boxId,
+    }));
+
+    // Scroll to the booking form
+    document
+      .getElementById("booking-form")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -96,15 +153,44 @@ function BookingForm() {
   }
 
   return (
-    <div className="p-6 md:p-8 max-w-2xl mx-auto space-y-6">
+    <div className="p-6 md:p-8 max-w-5xl mx-auto space-y-6">
       <div>
         <h1 className="page-title">Book a FreshBox</h1>
         <p className="text-sm text-slate-500 mt-1">
-          Fill in the rental details to reserve your cold storage unit
+          Get AI-powered box recommendations, then reserve your cold storage unit
         </p>
       </div>
 
-      <div className="card p-6 space-y-5">
+      {/* AI Box Recommendation Section */}
+      <BoxRecommendation onApplyRecommendation={handleApplyRecommendation} />
+
+      {/* Suggested Booking Banner */}
+      {appliedRecommendation && (
+        <div className="flex items-start gap-3 bg-gradient-to-r from-sky-50 to-indigo-50 border border-sky-200 rounded-xl p-4">
+          <div className="w-8 h-8 bg-sky-100 rounded-lg flex items-center justify-center flex-shrink-0">
+            <Sparkles size={14} className="text-sky-600" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-navy-800">
+              Suggested Booking Applied
+            </p>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {appliedRecommendation.result.recommendedQuantity}×{" "}
+              {appliedRecommendation.result.recommendedBoxType} for{" "}
+              {appliedRecommendation.input.totalWeightKg} kg{" "}
+              {appliedRecommendation.input.productName} ·{" "}
+              {appliedRecommendation.result.estimatedRentalCost}
+            </p>
+            <p className="text-[10px] text-slate-400 mt-1">
+              <Info size={10} className="inline mr-1" />
+              Form fields have been pre-filled. Review and confirm below.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Booking Form */}
+      <div id="booking-form" className="card p-6 space-y-5 max-w-2xl">
         {/* Section: Who */}
         <FormSection icon={User} title="Renter Information">
           <Field

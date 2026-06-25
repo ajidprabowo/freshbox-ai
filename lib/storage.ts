@@ -7,6 +7,8 @@ import {
   ProductBatch,
   Recommendation,
   Alert,
+  BoxRecommendationInput,
+  BoxRecommendationResult,
 } from "./types";
 import {
   INITIAL_BOXES,
@@ -22,6 +24,7 @@ const KEYS = {
   RECOMMENDATIONS: "freshbox_recommendations",
   ALERTS: "freshbox_alerts",
   INITIALIZED: "freshbox_initialized",
+  BOX_RECOMMENDATION: "freshbox_latest_box_recommendation",
 };
 
 /** Seed localStorage with mock data on first load */
@@ -138,4 +141,23 @@ export function addAlert(alert: Alert): void {
   // Keep only the last 50 alerts to avoid storage bloat
   const trimmed = [alert, ...alerts].slice(0, 50);
   saveAlerts(trimmed);
+}
+
+// ─── Box Recommendation ─────────────────────────────────────────────────────
+
+export type StoredBoxRecommendation = BoxRecommendationResult & {
+  input: BoxRecommendationInput;
+};
+
+export function saveLatestBoxRecommendation(
+  rec: StoredBoxRecommendation
+): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(KEYS.BOX_RECOMMENDATION, JSON.stringify(rec));
+}
+
+export function getLatestBoxRecommendation(): StoredBoxRecommendation | null {
+  if (typeof window === "undefined") return null;
+  const raw = localStorage.getItem(KEYS.BOX_RECOMMENDATION);
+  return raw ? (JSON.parse(raw) as StoredBoxRecommendation) : null;
 }

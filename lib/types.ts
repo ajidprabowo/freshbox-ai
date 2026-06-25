@@ -62,6 +62,57 @@ export interface ProductBatch {
   qualityGrade: QualityGrade;
   createdAt: string;
   recommendationId?: string;
+  /** Base64 data URL of the product photo (stored compressed in localStorage) */
+  productPhoto?: string;
+  /** AI-generated photo analysis results */
+  photoAnalysis?: ProductPhotoAnalysis;
+  /** ISO date string when photo was uploaded */
+  photoUploadedAt?: string;
+}
+
+// ─── Product Photo Analysis ─────────────────────────────────────────────────
+
+export interface ProductPhotoAnalysis {
+  detectedProduct: string;
+  visualQuality: "Good" | "Moderate" | "Poor" | "Unknown";
+  ripenessLevel: "Unripe" | "Semi-ripe" | "Ripe" | "Overripe" | "Unknown";
+  visibleRiskSigns: string[];
+  estimatedSpoilageRisk: "Low" | "Medium" | "High" | "Unknown";
+  handlingRecommendation: string;
+  confidenceLevel: "Low" | "Medium" | "High";
+  disclaimer: string;
+}
+
+// ─── Box Recommendation ─────────────────────────────────────────────────────
+
+export type ProductSensitivity = "Low" | "Medium" | "High";
+
+export interface BoxRecommendationInput {
+  productCategory: ProductCategory;
+  productName: string;
+  totalWeightKg: number;
+  estimatedVolumeLiters?: number;
+  storageDuration: number;
+  usageMode: UsageMode;
+  pickupLocation: string;
+  destinationLocation: string;
+  requiredDeliveryDate: string;
+  productSensitivity: ProductSensitivity;
+  needBatteryBackup: boolean;
+  needGpsTracking: boolean;
+}
+
+export interface BoxRecommendationResult {
+  recommendedBoxType: "FreshBox S" | "FreshBox M" | "FreshBox L";
+  recommendedQuantity: number;
+  estimatedCapacityUsed: string;
+  utilizationRate: string;
+  estimatedRentalCost: string;
+  microclimateSummary: string;
+  usageModeRecommendation: string;
+  alternativeOption: string;
+  reasoningSummary: string;
+  warning?: string;
 }
 
 export interface Recommendation {
